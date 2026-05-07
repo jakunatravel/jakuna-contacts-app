@@ -138,6 +138,7 @@
     <div id="formStep3" style="display:none">
       <div class="alert alert-error" id="saveError"></div>
       <div class="alert alert-success" id="saveSuccess"></div>
+      <div class="alert" id="duplicateWarning" style="display:none;background:#fdf4e7;border:1px solid #e0c070;color:#7a5c00;padding:12px 16px;border-radius:2px;font-size:13px;margin-bottom:16px;"></div>
 
       <div class="card">
         <div class="card-title">Review & Edit</div>
@@ -163,6 +164,7 @@
 
       <div class="btn-row">
         <button class="btn btn-ghost" id="btnStartOver">← Start Over</button>
+        <button class="btn btn-warning" id="btnUpdate" style="display:none;background:#c9842c;color:white;">Update Existing Contact</button>
         <button class="btn btn-success" id="btnSave">Save to Zoho CRM</button>
       </div>
     </div>
@@ -211,6 +213,18 @@ async function crmPost(endpoint,data){
   const res=await fetch(`${FUNC}/zoho-crm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:`${CRM_BASE}${endpoint}`,method:'POST',token,body:data})});
   return res.json();
 }
+async function crmGet(endpoint){
+  const token=await getValidToken();
+  const res=await fetch(`${FUNC}/zoho-crm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:`${CRM_BASE}${endpoint}`,method:'GET',token})});
+  return res.json();
+}
+async function crmPut(endpoint,data){
+  const token=await getValidToken();
+  const res=await fetch(`${FUNC}/zoho-crm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:`${CRM_BASE}${endpoint}`,method:'PUT',token,body:data})});
+  return res.json();
+}
+
+let existingContact=null;
 
 // Image handling
 function fileToBase64(file){
@@ -308,6 +322,30 @@ If a field is not visible on the card, use null. Do not guess or invent informat
     document.getElementById('r_phone').value=contact.phone||'';
     document.getElementById('r_mobile').value=contact.mobile||'';
 
+    // Check for existing contact by email
+    existingContact=null;
+    if(contact.email){
+      setAIStatus('Checking for existing contact...');
+      try{
+        const search=await crmGet(`/Contacts/search?criteria=(Email:equals:${encodeURIComponent(contact.email)})&per_page=1`);
+        if(search.data&&search.data.length>0){
+          existingContact=search.data[0];
+          // Pre-fill with existing data where scanned data is missing
+          if(!contact.first_name&&existingContact.First_Name) document.getElementById('r_first_name').value=existingContact.First_Name;
+          if(!contact.last_name&&existingContact.Last_Name) document.getElementById('r_last_name').value=existingContact.Last_Name;
+          if(!contact.title&&existingContact.Title) document.getElementById('r_title').value=existingContact.Title;
+          if(!contact.phone&&existingContact.Phone) document.getElementById('r_phone').value=existingContact.Phone;
+          if(!contact.mobile&&existingContact.Mobile) document.getElementById('r_mobile').value=existingContact.Mobile;
+          if(existingContact.Contact_Type) document.getElementById('r_contact_type').value=existingContact.Contact_Type;
+          // Show warning and update button
+          const dw=document.getElementById('duplicateWarning');
+          dw.style.display='block';
+          dw.textContent=`⚠ This email already exists in CRM (${existingContact.First_Name||''} ${existingContact.Last_Name||''}). Review below and click "Update Existing Contact" to update, or "Save to Zoho CRM" to create a new record.`;
+          document.getElementById('btnUpdate').style.display='inline-block';
+        }
+      }catch(e){console.log('Duplicate check failed:',e.message);}
+    }
+
     document.getElementById('aiStatusBox').classList.remove('visible');
     setStep(3);
 
@@ -353,8 +391,42 @@ document.getElementById('btnSave').addEventListener('click',async()=>{
   }
 });
 
+// Update existing contact
+document.getElementById('btnUpdate').addEventListener('click',async()=>{
+  const btn=document.getElementById('btnUpdate');
+  btn.disabled=true;btn.textContent='Updating...';
+  hideAlert('saveError');hideAlert('saveSuccess');
+  const record={};
+  const fields={
+    First_Name:document.getElementById('r_first_name').value,
+    Last_Name:document.getElementById('r_last_name').value,
+    Title:document.getElementById('r_title').value,
+    Email:document.getElementById('r_email').value,
+    Phone:document.getElementById('r_phone').value,
+    Mobile:document.getElementById('r_mobile').value,
+    Contact_Type:document.getElementById('r_contact_type').value,
+  };
+  Object.entries(fields).forEach(([k,v])=>{if(v&&v.trim())record[k]=v.trim();});
+  try{
+    const result=await crmPut(`/Contacts/${existingContact.id}`,{data:[record]});
+    if(result.data?.[0]?.code==='SUCCESS'||result.data?.[0]?.status==='success'){
+      showAlert('saveSuccess',`✓ ${record.First_Name||''} ${record.Last_Name} updated in Zoho CRM.`,'success');
+      btn.textContent='✓ Updated';
+    }else{
+      showAlert('saveError','Update failed: '+(result.data?.[0]?.message||JSON.stringify(result)),'error');
+      btn.disabled=false;btn.textContent='Update Existing Contact';
+    }
+  }catch(e){
+    showAlert('saveError','Error: '+e.message,'error');
+    btn.disabled=false;btn.textContent='Update Existing Contact';
+  }
+});
+
 // Start over
 document.getElementById('btnStartOver').addEventListener('click',()=>{
+  existingContact=null;
+  document.getElementById('duplicateWarning').style.display='none';
+  document.getElementById('btnUpdate').style.display='none';
   uploadedImages=[];
   renderPreviews();
   ['r_first_name','r_last_name','r_title','r_email','r_phone','r_mobile'].forEach(id=>document.getElementById(id).value='');
