@@ -372,6 +372,11 @@ document.getElementById('btnLogin').addEventListener('click',async()=>{
   try{
     const r=await loginWithPassword(password);
     if(r.access_token){
+      if(r.refresh_token){
+        console.log('=== SAVE THIS AS ZOHO_REFRESH_TOKEN IN NETLIFY ===');
+        console.log(r.refresh_token);
+        console.log('=================================================');
+      }
       saveTokens({password,accessToken:r.access_token,expiresAt:Date.now()+(r.expires_in*1000)});
       document.getElementById('crmDot').classList.add('connected');
       document.getElementById('crmStatus').textContent='CRM Connected';
