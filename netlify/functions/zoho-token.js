@@ -28,7 +28,7 @@ exports.handler = async (event) => {
     const clientSecret = process.env.ZOHO_CLIENT_SECRET;
     const base = 'https://accounts.zoho.eu';
 
-    // If we have a refresh token, use it
+    // Use refresh token if available
     if (process.env.ZOHO_REFRESH_TOKEN) {
       const params = new URLSearchParams({
         grant_type: 'refresh_token',
@@ -49,7 +49,7 @@ exports.handler = async (event) => {
       };
     }
 
-    // Otherwise exchange grant code
+    // Exchange grant code
     if (process.env.ZOHO_GRANT_CODE) {
       const params = new URLSearchParams({
         grant_type: 'authorization_code',
@@ -63,14 +63,18 @@ exports.handler = async (event) => {
         body: params.toString()
       });
       const data = await response.json();
+      
+      // Log refresh token so it can be saved
       if (data.refresh_token) {
-        // Return with note to save refresh token
+        console.log('=== ZOHO_REFRESH_TOKEN ===', data.refresh_token);
         return {
           statusCode: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...data,
-            note: 'SAVE THIS AS ZOHO_REFRESH_TOKEN: ' + data.refresh_token
+            access_token: data.access_token,
+            expires_in: data.expires_in,
+            refresh_token: data.refresh_token,
+            save_as_env: 'Add this as ZOHO_REFRESH_TOKEN in Netlify: ' + data.refresh_token
           })
         };
       }
@@ -84,7 +88,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'No ZOHO_REFRESH_TOKEN or ZOHO_GRANT_CODE configured' })
+      body: JSON.stringify({ error: 'No credentials configured' })
     };
 
   } catch (err) {
