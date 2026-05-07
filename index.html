@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jakuna Travel — Contact Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#1a1612;--paper:#f5f0e8;--gold:#c9a84c;--gold-light:#e8d5a3;
+    --muted:#8a7f72;--border:#ddd5c4;--white:#ffffff;
+    --success:#4a7c59;--error:#8b3a3a;--surface:#faf7f2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;font-size:14px;}
+  .header{background:var(--ink);padding:20px 40px;display:flex;align-items:center;justify-content:space-between;}
+  .header-brand{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--gold);letter-spacing:3px;text-transform:uppercase;}
+  .header-sub{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+  .connection-badge{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+  .dot{width:8px;height:8px;border-radius:50%;background:#555;}
+  .dot.connected{background:var(--success);box-shadow:0 0 6px rgba(74,124,89,0.6);}
+  .main{max-width:760px;margin:0 auto;padding:40px 24px 80px;}
+  .screen{display:none;}.screen.active{display:block;}
+  .setup-card{background:var(--white);border:1px solid var(--border);border-radius:2px;padding:48px;max-width:520px;margin:60px auto 0;}
+  .setup-eyebrow{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;}
+  .setup-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--ink);margin-bottom:8px;line-height:1.2;}
+  .setup-desc{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:36px;padding-bottom:36px;border-bottom:1px solid var(--border);}
+  .field{margin-bottom:20px;}
+  .field label{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:500;}
+  .field input,.field select{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:2px;background:var(--surface);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color 0.2s;}
+  .field input:focus,.field select:focus{border-color:var(--gold);background:var(--white);}
+  .btn{padding:11px 28px;border:none;border-radius:2px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:500;cursor:pointer;transition:all 0.2s;}
+  .btn-primary{background:var(--ink);color:var(--gold);}
+  .btn-primary:hover{background:#2d2720;}
+  .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+  .btn-success{background:var(--success);color:var(--white);}
+  .btn-row{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;}
+  .page-title{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:300;color:var(--ink);margin-bottom:4px;}
+  .page-sub{color:var(--muted);font-size:13px;margin-bottom:40px;}
+  .card{background:var(--white);border:1px solid var(--border);border-radius:2px;padding:32px;margin-bottom:20px;}
+  .card-title{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+  .steps{display:flex;align-items:center;gap:0;margin-bottom:36px;}
+  .step{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  .step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;background:var(--border);color:var(--muted);flex-shrink:0;}
+  .step.active .step-num{background:var(--gold);color:var(--ink);}
+  .step.done .step-num{background:var(--success);color:var(--white);}
+  .step-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+  .step.active .step-label{color:var(--ink);font-weight:500;}
+  .step-line{width:32px;height:1px;background:var(--border);flex-shrink:0;margin:0 4px;}
+  .ai-status{display:none;align-items:center;gap:12px;padding:16px 20px;background:var(--ink);color:var(--gold-light);border-radius:2px;margin-bottom:20px;font-size:13px;}
+  .ai-status.visible{display:flex;}
+  .spinner{width:16px;height:16px;border:2px solid rgba(201,168,76,0.3);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .alert{padding:12px 16px;border-radius:2px;font-size:13px;margin-bottom:16px;display:none;}
+  .alert.visible{display:block;}
+  .alert-error{background:#f9eded;border:1px solid #d4a0a0;color:var(--error);}
+  .alert-success{background:#edf5f0;border:1px solid #a0c4b0;color:var(--success);}
+  /* Upload area */
+  .upload-area{border:2px dashed var(--border);border-radius:2px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--surface);position:relative;}
+  .upload-area:hover,.upload-area.dragover{border-color:var(--gold);background:var(--white);}
+  .upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .upload-icon{font-size:32px;margin-bottom:12px;color:var(--muted);}
+  .upload-text{font-size:13px;color:var(--muted);line-height:1.6;}
+  .upload-text strong{color:var(--ink);}
+  .preview-images{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;}
+  .preview-img{width:120px;height:80px;object-fit:cover;border-radius:2px;border:1px solid var(--border);}
+  .remove-img{position:relative;display:inline-block;}
+  .remove-img button{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--error);color:white;border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;line-height:1;}
+  /* Review grid */
+  .review-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .review-field label{display:block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .review-field input,.review-field select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:2px;background:var(--surface);font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);outline:none;}
+  .review-field input:focus,.review-field select:focus{border-color:var(--gold);}
+  @media(max-width:600px){.header{padding:16px 20px;}.main{padding:24px 16px 60px;}.setup-card{padding:28px 20px;margin-top:32px;}.review-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><div class="header-brand">Jakuna Travel</div><div class="header-sub">Contact Scanner</div></div>
+  <div class="connection-badge"><div class="dot" id="crmDot"></div><span id="crmStatus">Not connected</span></div>
+</div>
+
+<div class="main">
+
+  <!-- LOGIN -->
+  <div class="screen active" id="screenLogin">
+    <div class="setup-card">
+      <div class="setup-eyebrow">Jakuna Travel</div>
+      <div class="setup-title">Contact<br>Scanner</div>
+      <div class="setup-desc">Scan business cards and save contacts directly to Zoho CRM.</div>
+      <div class="field"><label>Password</label><input type="password" id="appPassword" placeholder="Enter team password" autocomplete="off"></div>
+      <div class="alert alert-error" id="loginError"></div>
+      <div class="btn-row"><button class="btn btn-primary" id="btnLogin">Enter</button></div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div class="screen" id="screenApp">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+      <div><div class="page-title">Scan Card</div><div class="page-sub">Upload a business card photo — Claude will extract the contact details.</div></div>
+      <button class="btn btn-ghost" id="btnLogout" style="margin-top:8px">Log out</button>
+    </div>
+
+    <div class="steps">
+      <div class="step active" id="step1"><div class="step-num">1</div><div class="step-label">Upload</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="step2"><div class="step-num">2</div><div class="step-label">Scanning</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="step3"><div class="step-num">3</div><div class="step-label">Review & Save</div></div>
+    </div>
+
+    <!-- Step 1: Upload -->
+    <div id="formStep1">
+      <div class="card">
+        <div class="card-title">Business Card</div>
+        <div class="upload-area" id="uploadArea">
+          <input type="file" id="fileInput" accept="image/*" multiple>
+          <div class="upload-icon">📷</div>
+          <div class="upload-text"><strong>Tap to upload</strong> or drag & drop<br>Up to 2 images — JPG, PNG, HEIC</div>
+        </div>
+        <div class="preview-images" id="previewImages"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" id="btnScan" disabled>Scan Card →</button></div>
+    </div>
+
+    <!-- Step 2: Scanning -->
+    <div id="formStep2" style="display:none">
+      <div class="ai-status visible" id="aiStatusBox">
+        <div class="spinner"></div>
+        <span id="aiStatusText">Reading business card...</span>
+      </div>
+    </div>
+
+    <!-- Step 3: Review -->
+    <div id="formStep3" style="display:none">
+      <div class="alert alert-error" id="saveError"></div>
+      <div class="alert alert-success" id="saveSuccess"></div>
+
+      <div class="card">
+        <div class="card-title">Review & Edit</div>
+        <div class="review-grid">
+          <div class="review-field"><label>First Name</label><input type="text" id="r_first_name"></div>
+          <div class="review-field"><label>Last Name</label><input type="text" id="r_last_name"></div>
+          <div class="review-field"><label>Title / Position</label><input type="text" id="r_title"></div>
+          <div class="review-field"><label>Contact Type</label>
+            <select id="r_contact_type">
+              <option value="">— Select —</option>
+              <option>Hotel</option>
+              <option>DMC/Land Provider</option>
+              <option>Client</option>
+              <option>Travel Agent</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="review-field"><label>Email</label><input type="email" id="r_email"></div>
+          <div class="review-field"><label>Phone</label><input type="tel" id="r_phone"></div>
+          <div class="review-field" style="grid-column:1/-1"><label>Mobile</label><input type="tel" id="r_mobile"></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" id="btnStartOver">← Start Over</button>
+        <button class="btn btn-success" id="btnSave">Save to Zoho CRM</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const FUNC='https://contacts.jakunatravel.com/.netlify/functions';
+const CRM_BASE='https://www.zohoapis.eu/crm/v2';
+
+let tokens={};
+let uploadedImages=[];
+
+function saveTokens(t){localStorage.setItem('jakuna_contacts',JSON.stringify(t));tokens=t;}
+function loadTokens(){try{tokens=JSON.parse(localStorage.getItem('jakuna_contacts')||'{}');}catch(e){tokens={};}return tokens;}
+function clearTokens(){localStorage.removeItem('jakuna_contacts');tokens={};}
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function setStep(n){
+  [1,2,3].forEach(i=>{const el=document.getElementById('step'+i);el.classList.remove('active','done');if(i<n)el.classList.add('done');if(i===n)el.classList.add('active');});
+  ['formStep1','formStep2','formStep3'].forEach((id,i)=>{document.getElementById(id).style.display=(i+1===n)?'block':'none';});
+}
+function setAIStatus(msg){document.getElementById('aiStatusText').textContent=msg;}
+function showAlert(id,msg,type){const el=document.getElementById(id);el.textContent=msg;el.className=`alert alert-${type} visible`;}
+function hideAlert(id){document.getElementById(id).classList.remove('visible');}
+
+// Auth
+async function loginWithPassword(password){
+  const res=await fetch(`${FUNC}/zoho-token`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',password})});
+  return res.json();
+}
+async function refreshAccessToken(){
+  const res=await fetch(`${FUNC}/zoho-token`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',password:tokens.password})});
+  const data=await res.json();
+  if(data.access_token){tokens.accessToken=data.access_token;tokens.expiresAt=Date.now()+(data.expires_in*1000);saveTokens(tokens);}
+  return data;
+}
+async function getValidToken(){
+  if(!tokens.accessToken)throw new Error('Not authenticated');
+  if(Date.now()>(tokens.expiresAt-60000))await refreshAccessToken();
+  return tokens.accessToken;
+}
+async function crmPost(endpoint,data){
+  const token=await getValidToken();
+  const res=await fetch(`${FUNC}/zoho-crm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:`${CRM_BASE}${endpoint}`,method:'POST',token,body:data})});
+  return res.json();
+}
+
+// Image handling
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function renderPreviews(){
+  const container=document.getElementById('previewImages');
+  container.innerHTML=uploadedImages.map((img,i)=>`
+    <div class="remove-img">
+      <img src="${img.dataUrl}" class="preview-img" alt="Card ${i+1}">
+      <button onclick="removeImage(${i})">×</button>
+    </div>
+  `).join('');
+  document.getElementById('btnScan').disabled=uploadedImages.length===0;
+}
+
+function removeImage(i){
+  uploadedImages.splice(i,1);
+  renderPreviews();
+}
+
+document.getElementById('fileInput').addEventListener('change',async function(){
+  const files=Array.from(this.files).slice(0,2-uploadedImages.length);
+  for(const file of files){
+    const dataUrl=URL.createObjectURL(file);
+    const base64=await fileToBase64(file);
+    uploadedImages.push({dataUrl,base64,type:file.type});
+  }
+  renderPreviews();
+  this.value='';
+});
+
+const ua=document.getElementById('uploadArea');
+ua.addEventListener('dragover',e=>{e.preventDefault();ua.classList.add('dragover');});
+ua.addEventListener('dragleave',()=>ua.classList.remove('dragover'));
+ua.addEventListener('drop',async e=>{
+  e.preventDefault();ua.classList.remove('dragover');
+  const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/')).slice(0,2-uploadedImages.length);
+  for(const file of files){
+    const dataUrl=URL.createObjectURL(file);
+    const base64=await fileToBase64(file);
+    uploadedImages.push({dataUrl,base64,type:file.type});
+  }
+  renderPreviews();
+});
+
+// Scan
+document.getElementById('btnScan').addEventListener('click',async()=>{
+  setStep(2);
+  document.getElementById('aiStatusBox').classList.add('visible');
+  setAIStatus('Reading business card...');
+
+  try{
+    const imageContent=uploadedImages.map(img=>({
+      type:'image',
+      source:{type:'base64',media_type:img.type||'image/jpeg',data:img.base64}
+    }));
+    imageContent.push({
+      type:'text',
+      text:`Extract contact information from this business card image(s). Return ONLY valid JSON with these exact fields:
+{
+  "first_name": "first name or null",
+  "last_name": "last name or null",
+  "title": "job title/position or null",
+  "email": "email address or null",
+  "phone": "main phone number with country code or null",
+  "mobile": "mobile/cell number with country code or null"
+}
+If a field is not visible on the card, use null. Do not guess or invent information.`
+    });
+
+    const res=await fetch(`${FUNC}/claude-research`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:500,messages:[{role:'user',content:imageContent}]})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const cleaned=text.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+    const match=cleaned.match(/\{[\s\S]*\}/);
+    if(!match)throw new Error('Could not read card');
+    const contact=JSON.parse(match[0]);
+
+    // Fill review form
+    document.getElementById('r_first_name').value=contact.first_name||'';
+    document.getElementById('r_last_name').value=contact.last_name||'';
+    document.getElementById('r_title').value=contact.title||'';
+    document.getElementById('r_email').value=contact.email||'';
+    document.getElementById('r_phone').value=contact.phone||'';
+    document.getElementById('r_mobile').value=contact.mobile||'';
+
+    document.getElementById('aiStatusBox').classList.remove('visible');
+    setStep(3);
+
+  }catch(e){
+    document.getElementById('aiStatusBox').classList.remove('visible');
+    showAlert('saveError','Scan failed: '+e.message,'error');
+    setStep(3);
+  }
+});
+
+// Save to Zoho
+document.getElementById('btnSave').addEventListener('click',async()=>{
+  const btn=document.getElementById('btnSave');
+  btn.disabled=true;btn.textContent='Saving...';
+  hideAlert('saveError');hideAlert('saveSuccess');
+
+  const record={};
+  const fields={
+    First_Name:document.getElementById('r_first_name').value,
+    Last_Name:document.getElementById('r_last_name').value,
+    Title:document.getElementById('r_title').value,
+    Email:document.getElementById('r_email').value,
+    Phone:document.getElementById('r_phone').value,
+    Mobile:document.getElementById('r_mobile').value,
+    Contact_Type:document.getElementById('r_contact_type').value,
+  };
+  Object.entries(fields).forEach(([k,v])=>{if(v&&v.trim())record[k]=v.trim();});
+
+  if(!record.Last_Name){showAlert('saveError','Last name is required.','error');btn.disabled=false;btn.textContent='Save to Zoho CRM';return;}
+
+  try{
+    const result=await crmPost('/Contacts',{data:[record]});
+    if(result.data?.[0]?.code==='SUCCESS'||result.data?.[0]?.status==='success'){
+      showAlert('saveSuccess',`✓ ${record.First_Name||''} ${record.Last_Name} saved to Zoho CRM.`,'success');
+      btn.textContent='✓ Saved';
+    }else{
+      showAlert('saveError','Save failed: '+(result.data?.[0]?.message||JSON.stringify(result)),'error');
+      btn.disabled=false;btn.textContent='Save to Zoho CRM';
+    }
+  }catch(e){
+    showAlert('saveError','Error: '+e.message,'error');
+    btn.disabled=false;btn.textContent='Save to Zoho CRM';
+  }
+});
+
+// Start over
+document.getElementById('btnStartOver').addEventListener('click',()=>{
+  uploadedImages=[];
+  renderPreviews();
+  ['r_first_name','r_last_name','r_title','r_email','r_phone','r_mobile'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('r_contact_type').value='';
+  hideAlert('saveError');hideAlert('saveSuccess');
+  setStep(1);
+});
+
+// Login
+document.getElementById('btnLogin').addEventListener('click',async()=>{
+  const password=document.getElementById('appPassword').value.trim();
+  if(!password){showAlert('loginError','Please enter the password.','error');return;}
+  const btn=document.getElementById('btnLogin');
+  btn.disabled=true;btn.textContent='Connecting...';hideAlert('loginError');
+  try{
+    const r=await loginWithPassword(password);
+    if(r.access_token){
+      saveTokens({password,accessToken:r.access_token,expiresAt:Date.now()+(r.expires_in*1000)});
+      document.getElementById('crmDot').classList.add('connected');
+      document.getElementById('crmStatus').textContent='CRM Connected';
+      showScreen('screenApp');setStep(1);
+    }else{
+      showAlert('loginError',r.error==='Invalid password'?'Incorrect password.':'Connection failed: '+(r.error||JSON.stringify(r)),'error');
+      btn.disabled=false;btn.textContent='Enter';
+    }
+  }catch(e){showAlert('loginError','Error: '+e.message,'error');btn.disabled=false;btn.textContent='Enter';}
+});
+
+document.getElementById('appPassword').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btnLogin').click();});
+
+document.getElementById('btnLogout').addEventListener('click',()=>{
+  if(confirm('Log out?')){clearTokens();document.getElementById('crmDot').classList.remove('connected');document.getElementById('crmStatus').textContent='Not connected';document.getElementById('appPassword').value='';showScreen('screenLogin');}
+});
+
+(function init(){
+  const t=loadTokens();
+  if(t.password&&t.accessToken){document.getElementById('crmDot').classList.add('connected');document.getElementById('crmStatus').textContent='CRM Connected';showScreen('screenApp');setStep(1);}
+})();
+</script>
+</body>
+</html>
