@@ -431,6 +431,10 @@ document.getElementById('btnAddAnother').addEventListener('click',()=>{
   document.getElementById('duplicateWarning').style.display='none';
   document.getElementById('btnUpdate').style.display='none';
   document.getElementById('btnAddAnother').style.display='none';
+  document.getElementById('btnSave').disabled=false;
+  document.getElementById('btnSave').textContent='Save to Zoho CRM';
+  document.getElementById('btnUpdate').disabled=false;
+  document.getElementById('btnUpdate').textContent='Update Existing Contact';
   uploadedImages=[];
   renderPreviews();
   ['r_first_name','r_last_name','r_title','r_email','r_phone','r_mobile'].forEach(id=>document.getElementById(id).value='');
@@ -445,6 +449,10 @@ document.getElementById('btnStartOver').addEventListener('click',()=>{
   document.getElementById('duplicateWarning').style.display='none';
   document.getElementById('btnUpdate').style.display='none';
   document.getElementById('btnAddAnother').style.display='none';
+  document.getElementById('btnSave').disabled=false;
+  document.getElementById('btnSave').textContent='Save to Zoho CRM';
+  document.getElementById('btnUpdate').disabled=false;
+  document.getElementById('btnUpdate').textContent='Update Existing Contact';
   uploadedImages=[];
   renderPreviews();
   ['r_first_name','r_last_name','r_title','r_email','r_phone','r_mobile'].forEach(id=>document.getElementById(id).value='');
